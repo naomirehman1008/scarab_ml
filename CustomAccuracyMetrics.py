@@ -25,6 +25,19 @@ import matplotlib.pyplot as plt
 # same as confidence mechanism implemented in scarab
 # normalized by number of off-path cycles
 
+# metrics
+def error_per_mispred(tot_penalty, n_mispreds):
+    return tot_penalty / n_mispreds
+
+def custom_accuracy(tot_penalty, off_path_cycles):
+    return 1 - (tot_penalty / off_path_cycles)
+
+def approx_energy_saved(off_path_cycles, late_penalty, tot_cycles):
+    return (off_path_cycles - late_penalty) / tot_cycles
+
+def approx_slowdown(early_penalty, cycles):
+    return early_penalty / cycles
+
 def get_cycle_penalty_max_offpath(df, workload, max_penalty):
     groups_with_ones = df[df['prediction'] == 1].groupby('window_id').first().reset_index()
     groups_without_ones = df[~df['window_id'].isin(groups_with_ones['window_id'])]
@@ -116,6 +129,27 @@ def raw_penalty_all_errors(predictions, labels, penalties, window_ids, off_path_
                 n_errors += window_error_counts[window]
         print(f"{workload}: {total_penalty}")
 
+def get_metrics(predictions, raw_metrics_df, avg_off_path, total_cycles):
+    metrics_df = pd.DataFrame()
+    for i, workload in enumerate(predictions.keys()):
+        df_workload = raw_metrics_df[raw_metrics_df['workload'] == workload]
+        tot_penalty, early_penalty, late_penalty, off_path_cycles, n_mispreds = get_cycle_penalty_max_offpath(df_workload, workload, avg_off_path[workload])
+        _error_per_mispred      = error_per_mispred(tot_penalty, n_mispreds)
+        _custom_accuracy        = custom_accuracy(tot_penalty, off_path_cycles)
+        _approx_energy_saved    = approx_energy_saved(off_path_cycles, late_penalty, total_cycles[workload])
+        _approx_slowdown        = approx_slowdown(early_penalty, total_cycles[workload])
+        metrics_df = pd.concat(metrics_df, pd.DataFrame({'total_penalty': [tot_penalty],
+                                                         'early_penalty': [early_penalty],
+                                                         'late_penalty' : [late_penalty],
+                                                         'off_path_cycles' : [off_path_cycles],
+                                                         'n_mispreds' : [n_mispreds],
+                                                         'error_per_mispred' : [_error_per_mispred],
+                                                         'custom_accuracy' : [_custom_accuracy],
+                                                         'approx_energy_saved' : [_approx_energy_saved],
+                                                         'approx_slowdown' : [_approx_slowdown]
+                                                         }), ignore_index=True)
+        
+    return metrics_df
 
 # for testing
 if __name__ == "__main__":
