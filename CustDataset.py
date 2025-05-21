@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 import pandas as pd
 
 class CustDataset(Dataset):
-    def __init__(self, feather_files, N, stride, feature_list):
+    def __init__(self, feather_files, N, stride, feature_list, penalty_weight):
         """
         Args:
             feather_files (list): feathers containing dataset
@@ -11,10 +11,10 @@ class CustDataset(Dataset):
             stride (int): step size for fetch targets in a datapoint (1 is contiguous)
             features (list): names of columns in dataset to use as features
         """
-        self.N = N
+        self.N = N * stride
         self.S = stride
+        self.penalty_weight = penalty_weight
         data = pd.concat([pd.read_feather(feather_file) for feather_file in feather_files])
-        print(data)
         self.length = len(data)
         self.labels = data['off_path'].to_numpy()
 
@@ -43,12 +43,19 @@ class CustDataset(Dataset):
     def __getitem__(self, idx):
         if idx < self.N - 1:
             print(f"idx: {idx}, N: {self.N}")
-            assert(False)
+            # SUS
+            return self.__getitem__(idx + self.N)
         start_idx = idx - self.N + 1
         end_idx = idx + 1
 
         # Slice the features and flatten or reshape as needed
+        print(self.features.shape)
+        print(start_idx)
+        print(end_idx)
+        print(self.N)
+        print(self.S)
         features = self.features[start_idx:end_idx:self.S].flatten()
+        print(features.shape)
         label = self.labels[idx]
 
         # Convert to tensors
@@ -56,7 +63,7 @@ class CustDataset(Dataset):
         label_tensor = torch.tensor(label, dtype=torch.float32)
         penalty = self.penalties[idx]
         if(self.mode == 'train'):
-            return features_tensor, label_tensor, torch.tensor(1 + max((penalty * PENALTY_WEIGHT, 0.5)), dtype=torch.float32)
+            return features_tensor, label_tensor, torch.tensor(1 + max((penalty * self.penalty_weight, 0.5)), dtype=torch.float32)
         # return penalty for accuracy
         elif(self.mode == 'test'):
             penalty = self.penalties[idx]
