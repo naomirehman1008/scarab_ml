@@ -8,14 +8,14 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.inspection import permutation_importance
+from datetime import datetime
 
 # Constants
 CONTINUOUS_FEATURES = [
     'ft_start_addr', 'ft_length', 'cycles_since_btb_rec',
     'cycles_since_ibtb_rec', 'cycles_since_misfetch_rec',
     'cycles_since_mispred_rec', 'btb_miss_rate', 'ibtb_miss_rate',
-    'misfetch_rate', 'mispred_rate', 'dcache_miss_rate',
-    'icache_miss_rate', 'mlc_miss_rate', 'l1_rate',
+    'misfetch_rate', 'mispred_rate',
 ]
 
 CATEGORICAL_FEATURES = [
@@ -24,13 +24,13 @@ CATEGORICAL_FEATURES = [
 ]
 
 WORKLOAD_FEATHERS = {
-    'clang': ['../icache_consumed_data/clang.feather'],
-    'gcc': ['../icache_consumed_data/gcc.feather'],
-    'mysql': ['../icache_consumed_data/mysql.feather'],
-    'mongodb': ['../icache_consumed_data/mongodb.feather'],
-    'postgres': ['../icache_consumed_data/postgres.feather'],
-    'verilator': ['../icache_consumed_data/verilator.feather'],
-    'xgboost': ['../icache_consumed_data/xgboost.feather'],
+    'clang': ['../icache_consumed_data_TEST/clang.feather'],
+    'gcc': ['../icache_consumed_data_TEST/gcc.feather'],
+    #'mysql': ['../icache_consumed_data_TESTmysql.feather'],
+    #'mongodb': ['../icache_consumed_data_TEST/mongodb.feather'],
+    #'postgres': ['../icache_consumed_data_TEST/postgres.feather'],
+    #'verilator': ['../icache_consumed_data_TEST/verilator.feather'],
+    #'xgboost': ['../icache_consumed_data_TEST/xgboost.feather'],
 }
 
 RANDOM_STATE = 42
@@ -92,8 +92,9 @@ def process_workload(name, df):
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE
     )
-
+    print(f'Beginning random forest training for {name} workload at {datetime.now()}...')
     clf = train_random_forest(X_train, y_train)
+    print(f'Finished random forest training for {name} workload at {datetime.now()}.')
 
     # Gini Importance
     gini_importances = clf.feature_importances_
@@ -108,7 +109,7 @@ def process_workload(name, df):
         'Gini Importance',
         OUTPUT_DIRS['gini'] / f"{name}.png"
     )
-
+    print(f'Caclulating permulation importance for {name} workload at {datetime.now()}...')
     # Permutation Importance
     perm_result = permutation_importance(
         clf, X_test, y_test,
